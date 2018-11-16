@@ -179,8 +179,8 @@ def select_type_column(datafrm):
 			df_male = datafrm.loc[datafrm['Genero'] == 2]
 			male_pain_dict, male_arr7, male_arr12= readPain(df_male)
 
-			selector_Graph1["gender"]["male"] = {"total":male_pain_dict, "arr7": male_arr7, "arr12":male_arr12}
-			selector_Graph1["gender"]["female"] = {"total": female_pain_dict, "arr7": female_arr7, "arr12": female_arr12}
+			selector_Graph1["gender"]["male"] = {"total":male_pain_dict, "arr7": male_arr7, "arr12":male_arr12, "size":len(df_male)}
+			selector_Graph1["gender"]["female"] = {"total": female_pain_dict, "arr7": female_arr7, "arr12": female_arr12, "size":len(df_female)}
 
 		elif(key == "seniority"):
 			data = datafrm["Antiguidade"]
@@ -191,9 +191,9 @@ def select_type_column(datafrm):
 			df_12_23 = datafrm.loc[datafrm['Antiguidade'] > 11]
 			d1223_pain_dict, d1223_arr7, d1223_arr12 = readPain(df_12_23)
 
-			selector_Graph1["seniority"]["a[0-11]"] = {"total": d011_pain_dict, "arr7": d011_arr7, "arr12": d011_arr12}
+			selector_Graph1["seniority"]["a[0-11]"] = {"total": d011_pain_dict, "arr7": d011_arr7, "arr12": d011_arr12, "size":len(df_0_11)}
 			selector_Graph1["seniority"]["a[12-23]"] = {"total": d1223_pain_dict, "arr7": d1223_arr7,
-			                                       "arr12": d1223_arr12}
+			                                       "arr12": d1223_arr12, "size":len(df_12_23)}
 
 		elif (key == "age"):
 
@@ -206,9 +206,9 @@ def select_type_column(datafrm):
 			d3959_pain_dict, d3959_arr7, d3959_arr12 = readPain(df_39_59)
 
 			selector_Graph1["age"]["a[18-38]"] = {"total": d1838_pain_dict, "arr7": d1838_arr7,
-			                                           "arr12": d1838_arr12}
+			                                           "arr12": d1838_arr12, "size":len(df_18_38)}
 			selector_Graph1["age"]["a[39-59]"] = {"total": d3959_pain_dict, "arr7": d3959_arr7,
-			                                           "arr12": d3959_arr12}
+			                                           "arr12": d3959_arr12, "size":len(df_39_59)}
 
 		elif (key == "score"):
 			data = datafrm["Score"]
@@ -220,6 +220,8 @@ def select_type_column(datafrm):
 SelectorGraph = select_type_column(xl)
 
 app = dash.Dash()
+app.css.config.serve_locally = True
+app.scripts.config.serve_locally = True
 
 app.layout = html.Div([
 	html.Div(id="header_row", children=
@@ -240,13 +242,30 @@ app.layout = html.Div([
 			],
 			value = 'gender'
 		)
-	])
+	]),
+
+	html.Div(id="graphMatrix_Corr", children=
+		 [
+			 dcc.Graph(
+				 id='regressionMatrix'
+			 ),
+			dcc.Dropdown(
+				id="dropdown2",
+				options=[
+					{'label': 'Gender', 'value': 'gender'},
+					{'label': 'Age', 'value': 'age'},
+					{'label': 'Seniority', 'value': 'seniority'},
+					{'label': 'URQ', 'value':'urq'}
+				],
+				value = 'gender'
+			)
+	 	])
 ])
 
 def createHist(value, key):
 	return go.Histogram(
 		histfunc="sum",
-		y=SelectorGraph[value][key]["arr7"]["freq"]["y"],
+		y=np.divide(SelectorGraph[value][key]["arr7"]["freq"]["y"], SelectorGraph[value][key]["size"]),
 		x=SelectorGraph[value][key]["arr7"]["freq"]["x"],
 		name=key,
 	)
@@ -259,6 +278,91 @@ def update_output(value):
 	return {
 		'data': graphs
 	}
+
+@app.callback(
+	dash.dependencies.Output('regressionMatrix', 'figure'),
+    [dash.dependencies.Input('dropdown2', 'value')])
+def update_output2(value):
+	if(value == 'gender'):
+		print("Gender!!!")
+		class_code = {"male":0, "female":1}
+		color_vals = [class_code["male"] if cl==0 else class_code["female"] for cl in xl['Genero']]
+		pl_colorscale = [[0.0, '#19d3f3'],
+						 [0.333, '#19d3f3'],
+						 [0.333, '#e763fa'],
+						 [0.666, '#e763fa'],
+						 [0.666, '#636efa'],
+						 [1, '#636efa']]
+		# text = [df.loc[k, 'class'] for k in range(len(xl))]
+	elif(value == 'seniority'):
+		print("seniority!!!")
+		class_code = {"a[0-11]": 0, "a[12-23]": 1}
+		color_vals = [class_code["a[0-11]"] if cl <= 11 else class_code["a[12-23]"] for cl in xl['Antiguidade']]
+		pl_colorscale = [[0.0, '#19d3f3'],
+						 [0.333, '#19d3f3'],
+						 [0.333, '#e763fa'],
+						 [0.666, '#e763fa'],
+						 [0.666, '#636efa'],
+						 [1, '#636efa']]
+	elif(value == 'age'):
+		print("age!!!")
+		class_code = {"a[18-38]": 0, "a[39-59]": 1}
+		color_vals = [class_code["a[18-38]"] if (cl >= 18 and cl <=38) else class_code["a[39-59]"] for cl in xl['Idade']]
+		pl_colorscale = [[0.0, '#19d3f3'],
+						 [0.333, '#19d3f3'],
+						 [0.333, '#e763fa'],
+						 [0.666, '#e763fa'],
+						 [0.666, '#636efa'],
+						 [1, '#636efa']]
+	elif(value == 'urq'):
+		classes = np.unique(xl['URQ']).tolist()
+		class_code = {classes[k]: k for k in range(len(classes))}
+		color_vals = [class_code[cl] for cl in xl['URQ']]
+		pl_colorscale = [[0.0, '#19d3f3'],
+						 [0.333, '#19d3f3'],
+						 [0.333, '#e763fa'],
+						 [0.666, '#e763fa'],
+						 [0.666, '#636efa'],
+						 [1, '#636efa']]
+	#removed nan dataframe
+	df = pd.DataFrame([xl[lbl] for lbl in xl.keys() if("Intensidade" in lbl)]).T
+	print(df)
+	df = df.dropna()
+	print(df)
+
+	dim = [dict(label=lbl, values=df[lbl]) for lbl in df.keys()]
+	# dim = [dict(label='ombro', values =xl[])]
+	axis = dict(showline=True,
+				zeroline=False,
+				gridcolor='#fff',
+				ticklen=4)
+
+	trace1 = go.Splom(dimensions=dim,
+					  # default axes name assignment :
+					  # xaxes= ['x1','x2',  'x3'],
+					  # yaxes=  ['y1', 'y2', 'y3'],
+					  marker=dict(color=color_vals,
+								  size=7,
+								  colorscale=pl_colorscale,
+								  showscale=False,
+								  line=dict(width=0.5,
+											color='rgb(230,230,230)'))
+					  )
+	layout = go.Layout(
+		title='Iris Data set',
+		dragmode='select',
+		width=600,
+		height=600,
+		autosize=False,
+		hovermode='closest',
+		plot_bgcolor='rgba(240,240,240, 0.95)'
+	)
+
+	return {
+		'data': [trace1],
+		'layout': layout
+	}
+
 
 if __name__ == '__main__':
     app.run_server(debug=False)
