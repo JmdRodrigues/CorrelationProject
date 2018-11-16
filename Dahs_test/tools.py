@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 
 def make_rgb_transparent(rgb, bg_rgb, alpha):
 	return [alpha * c1 + (1 - alpha) * c2
@@ -30,3 +31,12 @@ def findcloser(array, value):
 def findcloser_log(array, value):
 	idx = (np.abs(array - value)).argmin()
 	return idx
+
+def createCorrMatrix(dataFrame, method='pearson'):
+	return dataFrame.corr(method=method)
+
+def normalize_df(dataFrame, norm='gauss'):
+	if(norm == 'gauss'):
+		return (dataFrame-dataFrame.mean())/dataFrame.std()
+	else:
+		return (dataFrame - dataFrame.mean())/(dataFrame.max - dataFrame.min)
