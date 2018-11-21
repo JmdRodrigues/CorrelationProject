@@ -7,11 +7,16 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import plotly.figure_factory as ff
 from plotly import tools
+import matplotlib.pyplot as plt
 
 pd.options.mode.chained_assignment = None
 
 xl = pd.read_excel("Base Dados_final.xlsx", "Base de dados")
 xl2 = pd.read_excel("Base Dados_final2.xlsx", "Sheet2")
+
+sum_pain_7d = pain_no_pain(xl)
+
+
 
 intensity = xl2[[intense for intense in xl2.keys() if "Intensidade" in intense]]
 psychosocial = xl2.iloc[:, 21:40]
@@ -21,7 +26,10 @@ intense_nrm = normalize_df(intensity)
 psychsl = normalize_df(psychosocial)
 scores1 = normalize_df(scores1)
 
-sum_pain_7d = pain_no_pain(xl)
+
+plt.title(str(sum(sum_pain_7d[np.where(sum_pain_7d>1)[0]])))
+plt.plot(sum_pain_7d[np.where(sum_pain_7d>1)[0]])
+plt.show()
 
 SelectorGraph = select_type_column(xl)
 
@@ -39,6 +47,8 @@ app.layout = html.Div([
 	[
 		dcc.Graph(
 			id='selector_graph'),
+		dcc.Graph(
+			id='selector_graph2'),
 		dcc.Dropdown(
 			id="dropdown1",
 			options=[
@@ -55,32 +65,33 @@ app.layout = html.Div([
 		)
 	]),
 
-	html.Div(id="graph_scatter_Corr", children=
-		 [
-			 dcc.Graph(
-				 id='scatterMatrix',
-				 style={"width": 1250, "height":1250}
-			 ),
-			dcc.Dropdown(
-				id="dropdown2",
-				options=[
-					{'label': 'Gender', 'value': 'gender'},
-					{'label': 'Age', 'value': 'age'},
-					{'label': 'Seniority', 'value': 'seniority'},
-					{'label': 'URQ', 'value':'urq'}
-				],
-				value = 'gender'
-			)
-	 	]),
+	# html.Div(id="graph_scatter_Corr", children=
+	# 	 [
+	# 		 dcc.Graph(
+	# 			 id='scatterMatrix',
+	# 			 style={"width": 1250, "height":1250, "padding-top":100}
+	# 		 ),
+	# 		dcc.Dropdown(
+	# 			id="dropdown2",
+	# 			options=[
+	# 				{'label': 'Gender', 'value': 'gender'},
+	# 				{'label': 'Age', 'value': 'age'},
+	# 				{'label': 'Seniority', 'value': 'seniority'},
+	# 				{'label': 'URQ', 'value':'urq'}
+	# 			],
+	# 			value = 'gender'
+	# 		)
+	#  	]),
 		html.Div(id="graph_matrix_corr", children=
          [
 	        dcc.Graph(
 		        id='selector_graph_corr',
-		        style={"width": 1500, "height":1500}
+		        style={"width": 1500, "height":1500, "padding-top":100, "padding-bottom":50, "padding-left":75}
 	        ),
 	        dcc.Dropdown(
 		        id="dropdown3",
 		        options=[
+					{'label': 'All', 'value': 'all'},
 					{'label': 'Male', 'value': 'male'},
 					{'label': 'Female', 'value': 'female'},
 					{'label': 'age over 39', 'value': '59'},
@@ -113,8 +124,28 @@ def createHist(value, key):
 		histfunc="sum",
 		y=np.divide(SelectorGraph[value][key]["arr7"]["freq"]["y"], SelectorGraph[value][key]["size"]),
 		x=SelectorGraph[value][key]["arr7"]["freq"]["x"],
-		name=key,
+		name=key + " - " + str(SelectorGraph[value][key]["size"]),
 	)
+
+def createHist2(value, key):
+	print(SelectorGraph[value][key]["arr7"]["freq"]["y"])
+	print(sum(SelectorGraph[value][key]["arr7"]["freq"]["y"]))
+
+	return go.Histogram(
+		histfunc="sum",
+		y=[np.divide(sum(SelectorGraph[value][key]["arr7"]["freq"]["y"]), SelectorGraph[value][key]["size"])/9],
+		x=["total"],
+		name=key + " - " + str(SelectorGraph[value][key]["size"]),
+	)
+
+@app.callback(
+    dash.dependencies.Output('selector_graph2', 'figure'),
+    [dash.dependencies.Input('dropdown1', 'value')])
+def update_output2(value):
+	graphs = [createHist2(value, key) for key in SelectorGraph[value].keys()]
+	return {
+		'data': graphs
+	}
 
 @app.callback(
     dash.dependencies.Output('selector_graph', 'figure'),
@@ -125,6 +156,7 @@ def update_output(value):
 		'data': graphs
 	}
 
+"""
 @app.callback(
 	dash.dependencies.Output('scatterMatrix', 'figure'),
     [dash.dependencies.Input('dropdown2', 'value')])
@@ -177,7 +209,7 @@ def update_output2(value):
 	return {
 		'data': [trace1],
 		'layout': layout
-	}
+	}"""
 
 @app.callback(
 	dash.dependencies.Output("selector_graph_corr", 'figure'),
@@ -187,14 +219,22 @@ def update_corr_graph(value1, value2):
 	#pain vs psych
 	if (value2 == "pp"):
 		xl_temp = pd.concat([intense_nrm, psychsl], axis=1)
+		wdt = 1250
+		hgt = 1000
 	#pain vs scores
 	elif(value2 == "ps1"):
 		xl_temp = pd.concat([intense_nrm, scores1], axis=1)
+		wdt = 1250
+		hgt = 1000
 	#psych vs scores
 	else:
 		xl_temp = pd.concat([psychsl, scores1], axis=1)
+		wdt = 1500
+		hgt = 1500
 
-	if(value1=="male"):
+	if(value1=="all"):
+		df = xl_temp
+	elif(value1=="male"):
 		df = xl_temp.loc[xl["Genero"] == 2]
 	elif(value1=="female"):
 		df = xl_temp.loc[xl["Genero"] == 1]
@@ -202,29 +242,63 @@ def update_corr_graph(value1, value2):
 		df = xl_temp.loc[xl["Idade"] > 39]
 	elif(value1=="39"):
 		df = xl_temp.loc[xl["Idade"] > 18 and xl["Idade"] <= 39]
+
 	elif(value1=="23"):
-		df = xl_temp.loc[xl["Antoguidade"] >= 11]
+		df = xl_temp.loc[xl["Antiguidade"] >= 11]
+
 	elif(value1=="11"):
 		df = xl_temp.loc[xl["Antiguidade"] < 11]
+
 	elif(value1=="mpain"):
 		df = xl_temp.loc[sum_pain_7d > 1]
+
+
 	elif(value1=="pain"):
-		df = xl_temp.loc[sum_pain_7d > 0]
-	elif(value1=="no_pain"):
+		df = xl_temp.loc[sum_pain_7d == 1]
+
+	elif(value1=="npain"):
 		df = xl_temp.loc[sum_pain_7d == 0]
+
 
 	x = [key for key in df.keys()]
 	y = [key for key in df.keys()]
 
-	z = abs(df.corr()).values.tolist()
+	z_corr = abs(df.corr())
+	z_corr[z_corr<0.3] = 0
+	z = z_corr.values.tolist()
 	z_text = np.around(z, decimals=2)
 
 	fig = ff.create_annotated_heatmap(z=z, x=x, y=y, annotation_text=z_text, reversescale=True, colorscale="Blues", showscale=True,
 	                                  xgap=1.5, ygap=1.5)
+	fig.layout["title"] = "Correlation Matrix - " + str(len(df))
+	fig['layout']['xaxis'].update(side='bottom')
+	fig['layout']["width"] = wdt
+	fig['layout']["height"] = hgt
+
 	# data = [go.Heatmap(z=abs(df.corr()).values.tolist(), colorscale="Blues_r")]
 	# data = fig
 
 	return fig
+
+@app.callback(
+	dash.dependencies.Output("selector_graph_corr", 'style'),
+	[dash.dependencies.Input("dropdown4", "value")]
+)
+def update_style_corr(value):
+	if (value == "pp"):
+		wdt = 1250
+		hgt = 1000
+	#pain vs scores
+	elif(value == "ps1"):
+		wdt = 1250
+		hgt = 1000
+	#psych vs scores
+	else:
+		wdt = 1500
+		hgt = 1500
+
+	return {'width':wdt, 'height':hgt, 'padding-top':100, 'padding-bottom':50, 'padding-left':75}
+
 
 if __name__ == '__main__':
     app.run_server(debug=False)

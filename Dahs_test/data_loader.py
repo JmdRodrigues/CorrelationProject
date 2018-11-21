@@ -230,20 +230,20 @@ def select_type_column(datafrm):
 												   "arr12": d120_arr12, "size":len(df_120)}
 
 		elif(key == "hght"):
-			df_174 = datafrm.loc[datafrm['Altura'] <= 174]
+			df_174 = datafrm.loc[datafrm['Altura'] <= 1.74]
 			d174_pain_dict, d174_arr7, d174_arr12 = readPain(df_174)
 			# [12-23]
-			df_190 = datafrm.loc[datafrm['Altura'] > 174]
+			df_190 = datafrm.loc[datafrm['Altura'] > 1.74]
 			d190_pain_dict, d190_arr7, d190_arr12 = readPain(df_190)
 
 			selector_Graph1["hght"]["a[155-174]"] = {"total": d174_pain_dict, "arr7": d174_arr7, "arr12": d174_arr12, "size":len(df_174)}
 			selector_Graph1["hght"]["a[175-200]"] = {"total": d190_pain_dict, "arr7": d190_arr7,
 												   "arr12": d190_arr12, "size":len(df_190)}
 		elif(key == "imc"):
-			df_18 = datafrm.loc[datafrm['IMC'] <= 23]
+			df_18 = datafrm.loc[datafrm['IMC'] <= 24.9]
 			d18_pain_dict, d18_arr7, d18_arr12 = readPain(df_18)
 			# [12-23]
-			df_31 = datafrm.loc[datafrm['IMC'] > 23]
+			df_31 = datafrm.loc[datafrm['IMC'] > 24.9]
 			d31_pain_dict, d31_arr7, d31_arr12 = readPain(df_31)
 
 			selector_Graph1["imc"]["a[18-23]"] = {"total": d18_pain_dict, "arr7": d18_arr7, "arr12": d18_arr12, "size":len(df_18)}

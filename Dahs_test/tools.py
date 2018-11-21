@@ -43,7 +43,6 @@ def normalize_df(dataFrame, norm='gauss'):
 
 def Dimension_Scatter_Matrix(selector_tag, dataframe):
 	if (selector_tag == 'gender'):
-		print("Gender!!!")
 		class_code = {"male": 0, "female": 1}
 		color_vals = [class_code["male"] if cl == 0 else class_code["female"] for cl in dataframe['Genero']]
 		pl_colorscale = [[0.0, '#19d3f3'],
@@ -54,7 +53,6 @@ def Dimension_Scatter_Matrix(selector_tag, dataframe):
 						 [1, '#636efa']]
 	# text = [df.loc[k, 'class'] for k in range(len(xl))]
 	elif (selector_tag == 'seniority'):
-		print("seniority!!!")
 		class_code = {"a[0-11]": 0, "a[12-23]": 1}
 		color_vals = [class_code["a[0-11]"] if cl <= 11 else class_code["a[12-23]"] for cl in dataframe['Antiguidade']]
 		pl_colorscale = [[0.0, '#19d3f3'],
@@ -64,7 +62,6 @@ def Dimension_Scatter_Matrix(selector_tag, dataframe):
 						 [0.666, '#636efa'],
 						 [1, '#636efa']]
 	elif (selector_tag == 'age'):
-		print("age!!!")
 		class_code = {"a[18-38]": 0, "a[39-59]": 1}
 		color_vals = [class_code["a[18-38]"] if (cl >= 18 and cl <= 38) else class_code["a[39-59]"] for cl in
 					  dataframe['Idade']]
@@ -86,9 +83,8 @@ def Dimension_Scatter_Matrix(selector_tag, dataframe):
 						 [1, '#636efa']]
 	# removed nan dataframe
 	df = pd.DataFrame([dataframe[lbl] for lbl in dataframe.keys() if ("Intensidade" in lbl)]).T
-	print(df)
 	df = df.dropna()
-	print(df)
+
 
 	dim = [dict(label=lbl, values=df[lbl]) for lbl in df.keys()]
 
