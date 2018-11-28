@@ -170,18 +170,21 @@ def update_output(value):
 )
 def update_corr_graph(value1, value2):
 	if(value1=="male"):
-		df = xl2.loc[xl["Genero"] == 2]
-		df.drop("Genero", 1)
+		scores = scores1.loc[xl["Genero"] == 2]
+		pain = intense_nrm.loc[xl["Genero"] == 2]
+		psych_s = psychsl.loc[xl["Genero"] == 2]
+
 	else:
-		df = xl2.loc[xl["Genero"] == 1]
-		df.drop("Genero", 1)
+		scores = scores1.loc[xl["Genero"] == 1]
+		pain = intense_nrm.loc[xl["Genero"] == 1]
+		psych_s = psychsl.loc[xl["Genero"] == 1]
 
 	if(value2 =="pp"):
-		z = abs(df.corr()).values.tolist()
-	z_text = np.around(z, decimals=2)
+		z = abs(pain.corr()).values.tolist()
+		z_text = np.around(z, decimals=2)
 
-	# fig = ff.create_annotated_heatmap(z=z, annotation_text=z_text, colorscale="Blues", showscale=True,
-	#                                   xgap=1.5, ygap=1.5)
+		fig = ff.create_annotated_heatmap(z=z, annotation_text=z_text, colorscale="Blues", showscale=True,
+	                                  xgap=1.5, ygap=1.5)
 
 	# data = [go.Heatmap(z=abs(df.corr()).values.tolist(), colorscale="Blues_r")]
 	# data = fig
