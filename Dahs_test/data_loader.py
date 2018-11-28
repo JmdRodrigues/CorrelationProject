@@ -158,8 +158,12 @@ def readPain(datafrm):
 
 def select_type_column(datafrm):
 
-	selector_Graph1 = {"gender": {"male": 0, "female": 0}, "seniority": {"a[0-11]": 0, "a[12-23]": 0}, "age": {"a[18-38]": 0, "a[39-59]": 0}, "score": 0}
-
+	selector_Graph1 = {"gender": {"male": 0, "female": 0}, "seniority": {"a[0-11]": 0, "a[12-23]": 0}, "age": {"a[18-38]": 0, "a[39-59]": 0},
+					   "wght": {"a[45-72]":0, "a[73-120]":0}, "hght": {"a[155-174]":0, "a[175-200]":0}, "imc":{"a[18-23]":0, "a[24-30]":0}, "score": 0}
+	urq_list = get_urq_list(datafrm)
+	selector_Graph1["urq"] = {urq:0 for urq in urq_list}
+	zone_list = get_zone_list(datafrm)
+	selector_Graph1["zone"] = {zone: 0 for zone in zone_list}
 	for key in selector_Graph1.keys():
 		if(key == "gender"):
 			#Female
@@ -169,8 +173,8 @@ def select_type_column(datafrm):
 			df_male = datafrm.loc[datafrm['Genero'] == 2]
 			male_pain_dict, male_arr7, male_arr12= readPain(df_male)
 
-			selector_Graph1["gender"]["male"] = {"total":male_pain_dict, "arr7": male_arr7, "arr12":male_arr12}
-			selector_Graph1["gender"]["female"] = {"total": female_pain_dict, "arr7": female_arr7, "arr12": female_arr12}
+			selector_Graph1["gender"]["male"] = {"total":male_pain_dict, "arr7": male_arr7, "arr12":male_arr12, "size": len(df_male)}
+			selector_Graph1["gender"]["female"] = {"total": female_pain_dict, "arr7": female_arr7, "arr12": female_arr12, "size": len(df_female)}
 
 		elif(key == "seniority"):
 			data = datafrm["Antiguidade"]
@@ -181,9 +185,9 @@ def select_type_column(datafrm):
 			df_12_23 = datafrm.loc[datafrm['Antiguidade'] > 11]
 			d1223_pain_dict, d1223_arr7, d1223_arr12 = readPain(df_12_23)
 
-			selector_Graph1["seniority"]["a[0-11]"] = {"total": d011_pain_dict, "arr7": d011_arr7, "arr12": d011_arr12}
+			selector_Graph1["seniority"]["a[0-11]"] = {"total": d011_pain_dict, "arr7": d011_arr7, "arr12": d011_arr12, "size":len(df_0_11)}
 			selector_Graph1["seniority"]["a[12-23]"] = {"total": d1223_pain_dict, "arr7": d1223_arr7,
-			                                       "arr12": d1223_arr12}
+			                                       "arr12": d1223_arr12, "size":len(df_12_23)}
 
 		elif (key == "age"):
 
@@ -196,16 +200,89 @@ def select_type_column(datafrm):
 			d3959_pain_dict, d3959_arr7, d3959_arr12 = readPain(df_39_59)
 
 			selector_Graph1["age"]["a[18-38]"] = {"total": d1838_pain_dict, "arr7": d1838_arr7,
-			                                           "arr12": d1838_arr12}
+			                                           "arr12": d1838_arr12, "size":len(df_18_38)}
 			selector_Graph1["age"]["a[39-59]"] = {"total": d3959_pain_dict, "arr7": d3959_arr7,
-			                                           "arr12": d3959_arr12}
+			                                           "arr12": d3959_arr12, "size":len(df_39_59)}
 
 		elif (key == "score"):
 			data = datafrm["Score"]
 
+		elif(key == "urq"):
+			for urq in urq_list:
+				df_urq = datafrm.loc[datafrm['URQ'] == urq]
+				urq_pain_dict, urq_arr7, urq_arr12 = readPain(df_urq)
+				selector_Graph1["urq"][urq] = {"total": urq_pain_dict, "arr7": urq_arr7, "arr12": urq_arr12, "size":len(df_urq)}
+		elif(key == "zone"):
+			for zone in zone_list:
+				df_zone = datafrm.loc[datafrm['Zona'] == zone]
+				zone_pain_dict, zone_arr7, zone_arr12 = readPain(df_zone)
+				selector_Graph1["zone"][zone] = {"total": zone_pain_dict, "arr7": zone_arr7, "arr12": zone_arr12, "size":len(df_zone)}
+
+		elif(key == "wght"):
+			df_72 = datafrm.loc[datafrm['Peso'] <= 72]
+			d72_pain_dict, d72_arr7, d72_arr12 = readPain(df_72)
+			# [12-23]
+			df_120 = datafrm.loc[datafrm['Peso'] > 72]
+			d120_pain_dict, d120_arr7, d120_arr12 = readPain(df_120)
+
+			selector_Graph1["wght"]["a[45-72]"] = {"total": d72_pain_dict, "arr7": d72_arr7, "arr12": d72_arr12, "size":len(df_72)}
+			selector_Graph1["wght"]["a[73-120]"] = {"total": d120_pain_dict, "arr7": d120_arr7,
+												   "arr12": d120_arr12, "size":len(df_120)}
+
+		elif(key == "hght"):
+			df_174 = datafrm.loc[datafrm['Altura'] <= 1.74]
+			d174_pain_dict, d174_arr7, d174_arr12 = readPain(df_174)
+			# [12-23]
+			df_190 = datafrm.loc[datafrm['Altura'] > 1.74]
+			d190_pain_dict, d190_arr7, d190_arr12 = readPain(df_190)
+
+			selector_Graph1["hght"]["a[155-174]"] = {"total": d174_pain_dict, "arr7": d174_arr7, "arr12": d174_arr12, "size":len(df_174)}
+			selector_Graph1["hght"]["a[175-200]"] = {"total": d190_pain_dict, "arr7": d190_arr7,
+												   "arr12": d190_arr12, "size":len(df_190)}
+		elif(key == "imc"):
+			df_18 = datafrm.loc[datafrm['IMC'] <= 24.9]
+			d18_pain_dict, d18_arr7, d18_arr12 = readPain(df_18)
+			# [12-23]
+			df_31 = datafrm.loc[datafrm['IMC'] > 24.9]
+			d31_pain_dict, d31_arr7, d31_arr12 = readPain(df_31)
+
+			selector_Graph1["imc"]["a[18-23]"] = {"total": d18_pain_dict, "arr7": d18_arr7, "arr12": d18_arr12, "size":len(df_18)}
+			selector_Graph1["imc"]["a[24-30]"] = {"total": d31_pain_dict, "arr7": d31_arr7,
+												   "arr12": d31_arr12, "size":len(df_31)}
 
 	return selector_Graph1
 
-# def get_data_tagged(dataframe, tag):
-# 	if(tag == "male"):
-#
+def pain_no_pain(dataframe):
+	pain7d_keys = [key for key in dataframe.keys() if np.logical_and("7dias" in key, "Ombro" in key or "Cotovelo" in key or "Pescoço" in key or "PunhoMao" in key or "Toracica" in key or "Lombar" in key)]
+	pain7d_df = dataframe[pain7d_keys]
+
+	for col in pain7d_df.columns:
+		pain7d_df.loc[pain7d_df[col]==1, col] = 1
+		pain7d_df.loc[pain7d_df[col]==2, col] = 1
+		pain7d_df.loc[pain7d_df[col]==3, col] = 2
+
+	return pain7d_df.sum(axis=1)
+
+def get_urq_list(main_dataframe):
+	urqs_list = []
+	for urq in main_dataframe["URQ"]:
+		if(urq not in urqs_list) and isinstance(urq, str):
+			urqs_list.append(urq)
+	return urqs_list
+
+def get_zone_list(main_dataframe):
+	zone_list = []
+	for zone in main_dataframe["Zona"]:
+		if (zone not in zone_list) and isinstance(zone, str):
+			zone_list.append(zone)
+	return zone_list
+
+def load_stations(xl):
+	xl_stations = [station for station in list(xl) if ("Estacao" in station)]
+	xl2 = xl[xl_stations].fillna(0)
+	stations_per_workr = {wkr: [xl2.loc[wkr, station] for station in xl_stations if station != 0] for wkr in
+	                      range(len(xl))}
+
+	return stations_per_workr
+
+# def load_data_from_stations(xl, stations_dic):
