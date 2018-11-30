@@ -35,11 +35,29 @@ def findcloser_log(array, value):
 def createCorrMatrix(dataFrame, method='pearson'):
 	return dataFrame.corr(method=method)
 
-def normalize_df(dataFrame, norm='gauss'):
-	if(norm == 'gauss'):
-		return (dataFrame-dataFrame.mean())/dataFrame.std()
+def normalize_df2(x, norm='gauss'):
+	if (norm == 'gauss'):
+		if (np.std(x)!=0):
+			return (x - np.mean(x)) / np.std(x)
+		else:
+			return 0
 	else:
-		return (dataFrame - dataFrame.mean())/(dataFrame.max - dataFrame.min)
+		if ((np.max(x)-np.min(x))!=0):
+			return (x - np.mean(x)) / (np.max(x)-np.min(x))
+		else:
+			return 0
+
+def normalize_df(dataFrame, norm='gauss'):
+	if (norm == 'gauss'):
+		if(0 in dataFrame.std().values):
+			return 0
+		else:
+			return (dataFrame - dataFrame.mean()) / dataFrame.std()
+	else:
+		if(0 in (dataFrame.max-dataFrame.min).values):
+			return (dataFrame - dataFrame.mean()) / (dataFrame.max - dataFrame.min)
+		else:
+			return (dataFrame - dataFrame.mean()) / (dataFrame.max - dataFrame.min)
 
 def Dimension_Scatter_Matrix(selector_tag, dataframe):
 	if (selector_tag == 'gender'):
@@ -89,4 +107,3 @@ def Dimension_Scatter_Matrix(selector_tag, dataframe):
 	dim = [dict(label=lbl, values=df[lbl]) for lbl in df.keys()]
 
 	return color_vals, pl_colorscale, dim
-

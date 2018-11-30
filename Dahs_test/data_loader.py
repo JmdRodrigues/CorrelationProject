@@ -1,21 +1,23 @@
+
 import numpy as np
-from CorrelationProject.Dahs_test.tools import gradient, findcloser_log
+from Dahs_test.tools import gradient, findcloser_log
+import pandas as pd
 
 def readPain(datafrm):
 	pain_dict7 = {"total": {"F":0, "I":0},
-	              "neck": {"F":0, "I":0},
-	              "shoulder": {"total": {"F":0, "I":0}, "left":{"F":0, "I":0}, "right":{"F":0, "I":0}},
-	              "elbow": {"total": {"F":0, "I":0}, "left":{"F":0, "I":0}, "right":{"F":0, "I":0}},
-	              "hand": {"total": {"F":0, "I":0}, "left":{"F":0, "I":0}, "right":{"F":0, "I":0}},
-	              "trunk": {"F":0, "I":0},
-	              "lombar": {"F":0, "I":0}}
+				  "neck": {"F":0, "I":0},
+				  "shoulder": {"total": {"F":0, "I":0}, "left":{"F":0, "I":0}, "right":{"F":0, "I":0}},
+				  "elbow": {"total": {"F":0, "I":0}, "left":{"F":0, "I":0}, "right":{"F":0, "I":0}},
+				  "hand": {"total": {"F":0, "I":0}, "left":{"F":0, "I":0}, "right":{"F":0, "I":0}},
+				  "trunk": {"F":0, "I":0},
+				  "lombar": {"F":0, "I":0}}
 	pain_dict12 = {"total": {"F": 0, "I": 0},
-	               "neck": {"F": 0, "I": 0},
-	               "shoulder": {"total": {"F": 0, "I": 0}, "left": {"F": 0, "I": 0}, "right": {"F": 0, "I": 0}},
-	               "elbow": {"total": {"F": 0, "I": 0}, "left": {"F": 0, "I": 0}, "right": {"F": 0, "I": 0}},
-	               "hand": {"total": {"F": 0, "I": 0}, "left": {"F": 0, "I": 0}, "right": {"F": 0, "I": 0}},
-	               "trunk": {"F": 0, "I": 0},
-	               "lombar":{"F":0, "I":0}}
+				   "neck": {"F": 0, "I": 0},
+				   "shoulder": {"total": {"F": 0, "I": 0}, "left": {"F": 0, "I": 0}, "right": {"F": 0, "I": 0}},
+				   "elbow": {"total": {"F": 0, "I": 0}, "left": {"F": 0, "I": 0}, "right": {"F": 0, "I": 0}},
+				   "hand": {"total": {"F": 0, "I": 0}, "left": {"F": 0, "I": 0}, "right": {"F": 0, "I": 0}},
+				   "trunk": {"F": 0, "I": 0},
+				   "lombar":{"F":0, "I":0}}
 
 	pain_array7 = {"freq":{"x":[], 'y':[]}, "int":{"x":[], 'y':[]}}
 	pain_array12 = {"x":[], 'y':[]}
@@ -148,6 +150,9 @@ def readPain(datafrm):
 			pain_array12["y"].append(pain_dict12["lombar"]["F"])
 			pain_array12["x"].append("lombar")
 
+	pain_array7["freq"]["x"].append("total")
+	pain_array7["freq"]["y"].append(sum(pain_array7["freq"]["y"]))
+
 
 	# #impedimento
 	# m12 = [key for key in datafrm.keys() if ('12m' in key and 'Impedimento' not in key)]
@@ -187,7 +192,7 @@ def select_type_column(datafrm):
 
 			selector_Graph1["seniority"]["a[0-11]"] = {"total": d011_pain_dict, "arr7": d011_arr7, "arr12": d011_arr12, "size":len(df_0_11)}
 			selector_Graph1["seniority"]["a[12-23]"] = {"total": d1223_pain_dict, "arr7": d1223_arr7,
-			                                       "arr12": d1223_arr12, "size":len(df_12_23)}
+												   "arr12": d1223_arr12, "size":len(df_12_23)}
 
 		elif (key == "age"):
 
@@ -200,9 +205,9 @@ def select_type_column(datafrm):
 			d3959_pain_dict, d3959_arr7, d3959_arr12 = readPain(df_39_59)
 
 			selector_Graph1["age"]["a[18-38]"] = {"total": d1838_pain_dict, "arr7": d1838_arr7,
-			                                           "arr12": d1838_arr12, "size":len(df_18_38)}
+													   "arr12": d1838_arr12, "size":len(df_18_38)}
 			selector_Graph1["age"]["a[39-59]"] = {"total": d3959_pain_dict, "arr7": d3959_arr7,
-			                                           "arr12": d3959_arr12, "size":len(df_39_59)}
+													   "arr12": d3959_arr12, "size":len(df_39_59)}
 
 		elif (key == "score"):
 			data = datafrm["Score"]
@@ -254,6 +259,7 @@ def select_type_column(datafrm):
 
 def pain_no_pain(dataframe):
 	pain7d_keys = [key for key in dataframe.keys() if np.logical_and("7dias" in key, "Ombro" in key or "Cotovelo" in key or "Pescoço" in key or "PunhoMao" in key or "Toracica" in key or "Lombar" in key)]
+
 	pain7d_df = dataframe[pain7d_keys]
 
 	for col in pain7d_df.columns:
@@ -280,9 +286,23 @@ def get_zone_list(main_dataframe):
 def load_stations(xl):
 	xl_stations = [station for station in list(xl) if ("Estacao" in station)]
 	xl2 = xl[xl_stations].fillna(0)
-	stations_per_workr = {wkr: [xl2.loc[wkr, station] for station in xl_stations if station != 0] for wkr in
-	                      range(len(xl))}
+	stations_per_workr = {wkr: [xl.loc[wkr, "URQ"] + str(xl2.loc[wkr, station]) for station in xl_stations if xl2.loc[wkr, station] != 0] for wkr in
+						  range(len(xl))}
 
 	return stations_per_workr
 
-# def load_data_from_stations(xl, stations_dic):
+def load_risk_coefs_per_wkr(xl, stations_per_wkr):
+	print("entering...1")
+	xl["urq_stations"] = xl["URQ"]+xl["Estacao"].map(str)
+	print("entering...2")
+	wkr_risk_mean = pd.DataFrame.from_dict({wkr: xl[xl["urq_stations"].isin(stations_per_wkr[wkr])].fillna(0).mean() for wkr in range(len(stations_per_wkr))}).T.drop(["urq_stations", "zona", "Estacao", "Data", "URQ"], axis=1)
+	print("entering...3")
+	wkr_risk_max = pd.DataFrame.from_dict({wkr: xl[xl["urq_stations"].isin(stations_per_wkr[wkr])].fillna(0).max() for wkr in range(len(stations_per_wkr))}).T.drop(["urq_stations", "zona", "Estacao", "Data", "URQ"], axis=1)
+	print("entering...4")
+	wkr_risk_min = pd.DataFrame.from_dict({wkr: xl[xl["urq_stations"].isin(stations_per_wkr[wkr])].fillna(0).min() for wkr in range(len(stations_per_wkr))}).T.drop(["urq_stations", "zona", "Estacao", "Data", "URQ"], axis=1)
+	print("entering...5")
+	wkr_risk_sum = pd.DataFrame.from_dict(
+		{wkr: xl[xl["urq_stations"].isin(stations_per_wkr[wkr])].fillna(0).sum() for wkr in
+		 range(len(stations_per_wkr))}).T.drop(["urq_stations", "zona", "Estacao", "Data", "URQ"], axis=1)
+
+	return wkr_risk_mean, wkr_risk_max, wkr_risk_min, wkr_risk_sum
