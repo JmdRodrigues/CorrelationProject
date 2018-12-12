@@ -1,5 +1,5 @@
-from Dahs_test.data_loader import *
-from Dahs_test.tools import *
+from CorrelationProject.Dahs_test.data_loader import *
+from CorrelationProject.Dahs_test.tools import *
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
@@ -18,7 +18,7 @@ print("loaded main database...")
 xl2 = pd.read_excel("Base Dados_final2.xlsx", "Sheet2")
 print("loaded main data...")
 stations_risk = pd.read_excel(
-    r"C:\Users\rjoao\Documents\PhD\Ana_Data_Correlation\CorrelationProject\Dahs_test\APErgo_Fatores de risco_1basedados.xlsx")
+    r"/media/jean/FishStory/Projectos/Doutoramento/Ana_correlacao/CorrelationProject/Dahs_test/APErgo_Fatores de risco_1basedados.xlsx")
 # Risk factors
 elbowRisk = stations_risk[["P_60_range", "P_80_range", "P_100_range"]].sum(axis=1)
 shoulderNeck_risk = stations_risk[["P_Stand_shoulderheight", "P_Stand_abovehead"]].sum(axis=1)
@@ -252,10 +252,10 @@ app.layout = html.Div([
     #  	]),
     html.Div(id="graph_matrix_corr", children=
     [
-        dcc.Graph(
-            id='selector_graph_corr',
-            style={"width": 1500, "height": 1500, "padding-top": 100, "padding-bottom": 50, "padding-left": 75}
-        ),
+        html.Div(
+            id="corr_plots",
+            children=[
+        ]),
         dcc.Dropdown(
             id="dropdown3",
             options=[
@@ -384,14 +384,63 @@ def createRadar(r, theta, zone):
 )
 def update_radarplot(value):
     # value will be the zone
-    r = np.array(SelectorGraph["zone"][value]["arr7"]["freq"]["y"])
-    theta = np.array(SelectorGraph["zone"][value]["arr7"]["freq"]["x"])
-    nr = np.delete(r, np.where(theta == "total")[0])
-    ntheta = np.delete(theta, np.where(theta == "total")[0])
-    graph = createRadar(nr, ntheta, value)
-    return {
-        'data': graph
-    }
+    df = xl.loc[xl["Zona"]==value]
+    print(df)
+    brs = ["pescoço", "ombro_d", "ombro_e", "cotovelo_d", "cotovelo_e", "mao_d", "mao_e", "toracica", "lombar"]
+
+    int_sup3, int_level1, int_level2, int_level3 = getIntensityBasedPain(df)
+    print(int_sup3)
+    r_level1 = [len(int_level1[tag])  for tag in brs]
+    r_level2 = [len(int_level2[tag])  for tag in brs]
+    r_level3 = [len(int_level3[tag])  for tag in brs]
+
+    trace1 = go.Barpolar(
+        r=r_level1,
+        text=brs,
+        name='[1-4]',
+        marker=dict(
+            color='green'
+        ))
+    trace2 = go.Barpolar(
+        r=r_level2,
+        text=brs,
+        name='[5-6]',
+        marker=dict(
+            color='yellow'
+        ))
+    trace3 = go.Barpolar(
+        r=r_level3,
+        text=brs,
+        name='[7-10]',
+        marker=dict(
+            color='red'
+        ))
+    layout = go.Layout(
+        title='Frequency of pain for each body region',
+        font=dict(
+            size=16
+        ),
+        legend=dict(
+            font=dict(
+                size=16
+            )
+        ),
+        radialaxis=dict(
+            ticksuffix='%'
+        ),
+        orientation=270
+    )
+    data = [trace1, trace2, trace3]
+    fig = go.Figure(data=data, layout=layout)
+    # r = np.array(SelectorGraph["zone"][value]["arr7"]["freq"]["y"])
+    # theta = np.array(SelectorGraph["zone"][value]["arr7"]["freq"]["x"])
+    # nr = np.delete(r, np.where(theta == "total")[0])
+    # ntheta = np.delete(theta, np.where(theta == "total")[0])
+    # graph = createRadar(nr, ntheta, value)
+    # return {
+    #     'data': graph
+    # }
+    return fig
 
 
 def createNormalHist(x):
@@ -489,7 +538,6 @@ def update_radarHist2(value):
                              enumerate(stations_risk["URQ"] + stations_risk["Estacao"].map(str)) if
                              (zone in nopain_ofzone)]
 
-
     x = ["IMC", "Idade", "Antiguidade", "Altura", "Genero"]
 
     y = [xl["IMC"][where_stations].mean(),
@@ -521,7 +569,7 @@ def update_radarHist2(value):
 
 
 @app.callback(
-    dash.dependencies.Output("selector_graph_corr", 'figure'),
+    dash.dependencies.Output("corr_plots", 'children'),
     [dash.dependencies.Input("dropdown3", "value"), dash.dependencies.Input("dropdown4", "value")]
 )
 def update_corr_graph(value1, value2):
@@ -557,7 +605,7 @@ def update_corr_graph(value1, value2):
         df = xl_temp.loc[xl["Idade"] > 39]
         sheet = "Age>39"
     elif (value1 == "39"):
-        df = xl_temp.loc[xl["Idade"] > 18] and xl_temp.loc[xl["Idade"] <= 39]
+        df = xl_temp.loc[xl["Idade"]<=39]
         sheet = "Age<39"
     elif (value1 == "23"):
         df = xl_temp.loc[xl["Antiguidade"] >= 11]
@@ -585,12 +633,12 @@ def update_corr_graph(value1, value2):
     y = [key for key in df.keys()]
 
     z_corr = abs(df.corr())
-    z_corr[z_corr < 0.3] = 0
+    z_corr[z_corr < 0.15] = 0
 
     z = z_corr.values.tolist()
     z_text = np.around(z, decimals=2)
 
-    fig = ff.create_annotated_heatmap(z=z, x=x, y=y, annotation_text=z_text, reversescale=True, colorscale="Blues",
+    fig = ff.create_annotated_heatmap(z=z, x=x, y=y, annotation_text=z_text, reversescale=False, colorscale="Blues",
                                       showscale=True,
                                       xgap=1.5, ygap=1.5)
 
@@ -599,28 +647,50 @@ def update_corr_graph(value1, value2):
     fig['layout']["width"] = wdt
     fig['layout']["height"] = hgt
 
-    return fig
+    #add hist plot with highest correlated ranked features
+    if (value2 == "pp"):
+        df1 = z_corr.iloc[18:, :18]
+        df2 = z_corr.iloc[:10, 10:]
 
-
-@app.callback(
-    dash.dependencies.Output("selector_graph_corr", 'style'),
-    [dash.dependencies.Input("dropdown4", "value")]
-)
-def update_style_corr(value):
-    if (value == "pp"):
-        wdt = 1250
-        hgt = 1000
-    # pain vs scores
-    elif (value == "ps1"):
-        wdt = 1250
-        hgt = 1000
-    # psych vs scores
+    elif (value2 == "ps1"):
+        df2 = z_corr.iloc[:10, 10:]
     else:
-        wdt = 1500
-        hgt = 1500
+        df2 = z_corr.iloc[:18, 18:]
 
-    return {'width': wdt, 'height': hgt, 'padding-top': 100, 'padding-bottom': 50, 'padding-left': 75}
+    #get most important correlations
+    df_mean = df2.mean().dropna()
+    most5 = np.sort(df_mean)[-5:]
+    most5_k = [df_mean.loc[df_mean==val].keys()[0] for val in most5][::-1]
+    #get features more realted with each variable
+    most5_features = [np.sort(df2[key])[-5:][::-1] for key in most5_k]
+    most5_features_k = [[df2[key].loc[df2[key] == val].keys()[0] for val in vals] for key, vals in
+                        zip(most5_k, most5_features)]
 
+    traces = []
+    for index in range(len(most5_k)):
+        traces.append(go.Bar(
+            x=most5_features_k[index],
+            y=most5_features[index],
+            name = most5_k[index]
+        ))
+    layout = go.Layout(
+        barmode='group'
+    )
+    fig2 = go.Figure(data=traces, layout=layout)
+
+    div_children = [
+        dcc.Graph(
+            id='selector_graph_corr',
+            style={"width": wdt, "height":hgt, "padding-top": 100, "padding-bottom": 50, "padding-left": 75},
+            figure=fig),
+        dcc.Graph(
+            id = 'most_corr',
+            figure=fig2,
+            style={"height":500, "padding-bottom": 50},
+        )
+    ]
+
+    return div_children
 
 if __name__ == '__main__':
     app.run_server(debug=False)

@@ -1,6 +1,6 @@
 
 import numpy as np
-from Dahs_test.tools import gradient, findcloser_log
+from CorrelationProject.Dahs_test.tools import gradient, findcloser_log
 import pandas as pd
 
 def readPain(datafrm):
@@ -306,3 +306,21 @@ def load_risk_coefs_per_wkr(xl, stations_per_wkr):
 		 range(len(stations_per_wkr))}).T.drop(["urq_stations", "zona", "Estacao", "Data", "URQ"], axis=1)
 
 	return wkr_risk_mean, wkr_risk_max, wkr_risk_min, wkr_risk_sum
+
+def getIntensityBasedPain(df):
+	brs_tag = ["Pescoço_Intensidade", "Ombro_Intensidade_direito", "Ombro_Intensidade_esquerdo", "Cotovelo_Intensidade_direito", "Cotovelo_Intensidade_esquerdo", "PunhoMao_Intensidade_direita", "PunhoMao_Intensidade_esquerda",
+	       "Toracica_Intensidade", "Lombar_Intensidade"]
+	brs = ["pescoço", "ombro_d", "ombro_e", "cotovelo_d", "cotovelo_e", "mao_d", "mao_e", "toracica", "lombar"]
+
+	int_sup3 = {br:df[key].loc[df[key]>=3] for br, key in zip(brs, brs_tag)}
+
+	#entre 1 a 4
+	int_level1 = {br:df[key].loc[(df[key]>=1) & (df[key]<=4)] for br, key in zip(brs, brs_tag)}
+	int_level2 = {br:df[key].loc[(df[key]>=5) & (df[key]<=6)] for br, key in zip(brs, brs_tag)}
+	int_level3 = {br:df[key].loc[(df[key]>=7) & (df[key]<=10)] for br, key in zip(brs, brs_tag)}
+
+	return int_sup3, int_level1, int_level2, int_level3
+
+
+
+
