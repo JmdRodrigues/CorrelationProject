@@ -32,6 +32,15 @@ print("loaded risk factors...")
 
 print("extracting main data from database...")
 stations_per_wkr = load_stations(xl)
+#get versatility
+nbr_stations_per_wkr = [len(stations_per_wkr[s]) for s in stations_per_wkr.keys()]
+#get score value for versatility
+d = [np.mean([stations_risk["Score"].loc[stations_risk["URQ"]+stations_risk["Estacao"].map(str) == s].values for s in stations_per_wkr[i]]) for i in stations_per_wkr.keys()]
+d = np.hstack(d)
+d = [0 if i is np.nan else i for i in d]
+
+plt.plot(nbr_stations_per_wkr)
+plt.show()
 print("got stations that each worker performed...")
 wkr_risks = load_risk_coefs_per_wkr(stations_risk, stations_per_wkr)
 print("loaded mean, max and min risk factors for each worker")
@@ -52,13 +61,19 @@ print("normalizing...")
 sum_pain_7d = pain_no_pain(xl)
 
 msiteZona = xl["Zona"].loc[sum_pain_7d >= 1]
+nopainZona = xl['Zona'].loc[sum_pain_7d == 0]
+
 msite_index = list(np.where(sum_pain_7d >= 1)[0])
+nopain_index = list(np.where(sum_pain_7d == 0)[0])
 
 # check stations that people with reported pain have done
-msite_stations = np.unique([item for index in msite_index for item in stations_per_wkr[index]])
+msite_stations = [item for index in msite_index for item in stations_per_wkr[index]]
+nopain_stations = [item for index in nopain_index for item in stations_per_wkr[index]]
 
 intensity = xl2[[intense for intense in xl2.keys() if "Intensidade" in intense]]
-psychosocial = xl2.iloc[:, 21:40]
+print(intensity)
+psychosocial = xl2.iloc[:, 22:40]
+print(psychosocial)
 scores_mean = wkr_mean[
     [scores for scores in wkr_mean.keys() if ("score" in scores or "Score" in scores or "P_" in scores)]]
 scores_max = wkr_max[
@@ -76,9 +91,9 @@ print("starting dash app...")
 SelectorGraph = select_type_column(xl)
 
 def run_corr_excel():
-    value2 = "ps1"
+    value2 = "pp"
     values1 = ["all", "male", "female", "59", "39", "23", "11", "imc1", "imc2", "mpain", "pain"]
-    writer = pd.ExcelWriter('Pain_Score.xlsx', engine="xlsxwriter")
+    writer = pd.ExcelWriter('Pain_Psych.xlsx', engine="xlsxwriter")
     for value1 in values1:
         # pain vs psych
         if (value2 == "pp"):
@@ -397,20 +412,45 @@ def update_radarHist(value):
     # zone = msiteZona.loc[msiteZona==value]
 
     stations_ofzone = [station for station in msite_stations if station[0] == value]
+    nopain_ofzone = [station for station in nopain_stations if station[0] == value]
+
+    elbowPain = np.mean([elbowRisk[np.where((stations_risk["URQ"] + stations_risk["Estacao"].map(str))==station)[0][0]] for station in stations_ofzone if station in list(stations_risk["URQ"] + stations_risk["Estacao"].map(str))])
+    elbowNoPain = np.mean([elbowRisk[np.where((stations_risk["URQ"] + stations_risk["Estacao"].map(str))==station)[0][0]] for station in nopain_ofzone if station in list(stations_risk["URQ"] + stations_risk["Estacao"].map(str))])
+    shoulderNeckPain = np.mean([shoulderNeck_risk[np.where((stations_risk["URQ"] + stations_risk["Estacao"].map(str))==station)[0][0]] for station in stations_ofzone if station in list(stations_risk["URQ"] + stations_risk["Estacao"].map(str))])
+    shoulderNeckNoPain = np.mean([shoulderNeck_risk[np.where((stations_risk["URQ"] + stations_risk["Estacao"].map(str))==station)[0][0]] for station in nopain_ofzone if station in list(stations_risk["URQ"] + stations_risk["Estacao"].map(str))])
+    trunkPain = np.mean([trunkRisk[np.where((stations_risk["URQ"] + stations_risk["Estacao"].map(str))==station)[0][0]] for station in stations_ofzone if station in list(stations_risk["URQ"] + stations_risk["Estacao"].map(str))])
+    trunkNoPain = np.mean([trunkRisk[np.where((stations_risk["URQ"] + stations_risk["Estacao"].map(str))==station)[0][0]] for station in nopain_ofzone if station in list(stations_risk["URQ"] + stations_risk["Estacao"].map(str))])
+
+    scorePain = scoreRisk.loc[
+        [np.where((stations_risk["URQ"] + stations_risk["Estacao"].map(str)) == station)[0][0] for station in
+         stations_ofzone if station in list(stations_risk["URQ"] + stations_risk["Estacao"].map(str))]].mean()
+
+    scoreNoPain = scoreRisk.loc[
+        [np.where((stations_risk["URQ"] + stations_risk["Estacao"].map(str)) == station)[0][0] for station in
+         nopain_ofzone if station in list(stations_risk["URQ"] + stations_risk["Estacao"].map(str))]].mean()
 
     where_stations = [index for index, zone in enumerate(stations_risk["URQ"] + stations_risk["Estacao"].map(str)) if
                       (zone in stations_ofzone)]
+    #
+    where_stations_nopain = [index for index, zone in enumerate(stations_risk["URQ"] + stations_risk["Estacao"].map(str)) if
+                      (zone in nopain_ofzone)]
 
     x = ["P_range", "P_abovesh&head", "P_stand_bent"]
     y = [elbowRisk[where_stations].mean(),
          shoulderNeck_risk[where_stations].mean(),
          trunkRisk[where_stations].mean()]
     y2 = [elbowRisk.mean(), shoulderNeck_risk.mean(), trunkRisk.mean()]
+    y3 = [elbowRisk[where_stations_nopain].mean(),
+         shoulderNeck_risk[where_stations_nopain].mean(),
+         trunkRisk[where_stations_nopain].mean()]
+
     score_factors = list(scoreRisk.loc[where_stations].mean().values)
     score_factors2 = list(scoreRisk.mean().values)
+    score_factors3 = list(scoreRisk.loc[where_stations_nopain].mean().values)
     x_factors = list(scoreRisk.loc[where_stations].mean().keys())
     y = y + score_factors
     y2 = y2 + score_factors2
+    y3 = y3+score_factors3
 
     x = x + x_factors
 
@@ -418,12 +458,13 @@ def update_radarHist(value):
     #      shoulderNeck_risk.loc[stations_risk["zona"] == value].mean(),
     #      trunkRisk.loc[stations_risk["zona"] == value]]
 
-    data = createHist(x, y, "Pain population")
-    data2 = createHist(x, y2, "Normal population")
+    trace = createHist(x, y, "Pain population")
+    trace2 = createHist(x, y2, "Normal population")
+    trace3 = createHist(x, y3, "No pain population")
     # data = [elbow_hist, shoulderNeck_hist, trunk_hist]
 
     return {
-        "data": [data, data2],
+        "data": [trace, trace2, trace3],
         "layout": go.Layout(barmode="stack")
     }
 
@@ -432,16 +473,22 @@ def update_radarHist(value):
     dash.dependencies.Output("hist_personal", "figure"),
     [dash.dependencies.Input("dropdown_zone", "value")]
 )
-def update_radarHist(value):
+def update_radarHist2(value):
     # elbow_hist = createNormalHist(elbowRisk.loc[stations_risk["zona"]==value])
     # shoulderNeck_hist = createNormalHist(shoulderNeck_risk.loc[stations_risk["zona"]==value])
     # trunk_hist = createNormalHist(trunkRisk.loc[stations_risk["zona"]==value])
     # zone = msiteZona.loc[msiteZona==value]
 
     stations_ofzone = [station for station in msite_stations if station[0] == value]
+    nopain_ofzone = [station for station in nopain_stations if station[0] == value]
 
     where_stations = [index for index, zone in enumerate(stations_risk["URQ"] + stations_risk["Estacao"].map(str)) if
                       (zone in stations_ofzone)]
+
+    where_stations_nopain = [index for index, zone in
+                             enumerate(stations_risk["URQ"] + stations_risk["Estacao"].map(str)) if
+                             (zone in nopain_ofzone)]
+
 
     x = ["IMC", "Idade", "Antiguidade", "Altura", "Genero"]
 
@@ -455,14 +502,20 @@ def update_radarHist(value):
           xl["Antiguidade"].mean(),
           xl["Altura"].mean(),
           xl["Genero"].mean()]
+    y3 = [xl["IMC"][where_stations_nopain].mean(),
+         xl["Idade"][where_stations_nopain].mean(),
+         xl["Antiguidade"][where_stations_nopain].mean(),
+         xl["Altura"][where_stations_nopain].mean(),
+         xl["Genero"][where_stations_nopain].mean()]
 
     x_factors = list(scoreRisk.loc[where_stations].mean().keys())
 
     data = createHist(x, y, "Pain population")
     data2 = createHist(x, y2, "Normal population")
+    data3 = createHist(x, y3, "No pain population")
 
     return {
-        "data": [data, data2],
+        "data": [data, data2, data3],
         "layout": go.Layout(barmode="stack")
     }
 
@@ -567,9 +620,6 @@ def update_style_corr(value):
         hgt = 1500
 
     return {'width': wdt, 'height': hgt, 'padding-top': 100, 'padding-bottom': 50, 'padding-left': 75}
-
-
-
 
 
 if __name__ == '__main__':
