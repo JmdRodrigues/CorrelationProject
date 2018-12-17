@@ -59,6 +59,7 @@ else:
 print("normalizing...")
 
 sum_pain_7d = pain_no_pain(xl)
+# xl2 = xl2.loc[sum_pain_7d>=1]
 
 msiteZona = xl["Zona"].loc[sum_pain_7d >= 1]
 nopainZona = xl['Zona'].loc[sum_pain_7d == 0]
@@ -255,6 +256,9 @@ app.layout = html.Div([
         html.Div(
             id="corr_plots",
             children=[
+            dcc.Dropdown(
+                    id="drop-Feature"
+            )
         ]),
         dcc.Dropdown(
             id="dropdown3",
@@ -285,6 +289,9 @@ app.layout = html.Div([
                 {'label': 'Psych VS Scores', 'value': 'ps2'},
             ],
             value='pp'
+        ),
+        dcc.Graph(
+                     id="violin",
         ),
     ])
 ])
@@ -632,7 +639,7 @@ def update_corr_graph(value1, value2):
     x = [key for key in df.keys()]
     y = [key for key in df.keys()]
 
-    z_corr = abs(df.corr())
+    z_corr = abs(df.corr(method="spearman"))
     z_corr[z_corr < 0.15] = 0
 
     z = z_corr.values.tolist()
@@ -659,12 +666,61 @@ def update_corr_graph(value1, value2):
 
     #get most important correlations
     df_mean = df2.mean().dropna()
-    most5 = np.sort(df_mean)[-5:]
+    most5 = np.sort(df_mean)[-5:].tolist()
     most5_k = [df_mean.loc[df_mean==val].keys()[0] for val in most5][::-1]
     #get features more realted with each variable
     most5_features = [np.sort(df2[key])[-5:][::-1] for key in most5_k]
     most5_features_k = [[df2[key].loc[df2[key] == val].keys()[0] for val in vals] for key, vals in
                         zip(most5_k, most5_features)]
+
+    y2 = np.unique(most5_features_k).tolist()
+    x2 = most5_k
+    z2 = [[df2.loc[y_l, x_l] for y_l in y2] for x_l in x2]
+
+    fig2 = ff.create_annotated_heatmap(z=z2, x=y2, y=x2, annotation_text=np.around(z2, decimals=2), reversescale=False, colorscale="Blues",
+                                      showscale=True,
+                                      xgap=1, ygap=1)
+    fig2.layout["yaxis"].update(
+        automargin=True
+    )
+    fig2.layout["xaxis"].update(
+        automargin=True
+    )
+
+
+    #create DropDown
+
+    options = [{"label":tag, "value":tag} for tag in most5_k]
+    drop = dcc.Dropdown(
+        id="drop-Feature",
+        options=options
+    )
+
+    # violinPlot = dict(
+    #     data={
+    #         "type": 'violin',
+    #         "x": df[most5_k[0]],
+    #         "y": df["Intensidade_Media"],
+    #         "legendgroup": 'Yes',
+    #         "scalegroup": 'Yes',
+    #         "name": 'Yes',
+    #         "side": 'negative',
+    #         "box": {
+    #             "visible": True,
+    #             "color":"white"
+    #         },
+    #         "meanline": {
+    #             "visible": True
+    #         },
+    #         "line": {
+    #             "color": 'blue'
+    #         }
+    #     },
+    # )
+    # fig3 = {"data":[violinPlot]}
+    #
+
+
 
     traces = []
     for index in range(len(most5_k)):
@@ -676,21 +732,102 @@ def update_corr_graph(value1, value2):
     layout = go.Layout(
         barmode='group'
     )
-    fig2 = go.Figure(data=traces, layout=layout)
+
+    # fig2 = go.Figure(data=traces, layout=layout)
 
     div_children = [
-        dcc.Graph(
-            id='selector_graph_corr',
-            style={"width": wdt, "height":hgt, "padding-top": 100, "padding-bottom": 50, "padding-left": 75},
-            figure=fig),
+        # dcc.Graph(
+        #     id='selector_graph_corr',
+        #     style={"width": wdt, "height":hgt, "padding-top": 100, "padding-bottom": 50, "padding-left": 75},
+        #     figure=fig),
         dcc.Graph(
             id = 'most_corr',
             figure=fig2,
             style={"height":500, "padding-bottom": 50},
+        ),
+        html.Div(
+            children=[drop],
+            style={"width":"100px"}
         )
     ]
 
     return div_children
+
+@app.callback(
+    dash.dependencies.Output("violin", 'figure'),
+    [dash.dependencies.Input("drop-Feature", "value"),
+     dash.dependencies.Input("dropdown3", "value")]
+)
+def update_violin(value2, value1):
+    print("Got here!!!")
+    if (value1 == "all"):
+        df = xl
+        dfI = intensity
+        sheet = "All"
+    elif (value1 == "male"):
+        df = xl.loc[xl["Genero"] == 2]
+        dfI = intensity.loc[xl["Genero"] == 2]
+        sheet = "Men"
+    elif (value1 == "female"):
+        df = xl.loc[xl["Genero"] == 1]
+        dfI = intensity.loc[xl["Genero"] == 1]
+        sheet = "Women"
+    elif (value1 == "59"):
+        df = xl.loc[xl["Idade"] > 39]
+        dfI = intensity.loc[xl["Idade"] > 39]
+        sheet = "Age>39"
+    elif (value1 == "39"):
+        df = xl.loc[xl["Idade"] <= 39]
+        dfI = intensity.loc[xl["Idade"] <= 39]
+        sheet = "Age<39"
+    elif (value1 == "23"):
+        df = xl.loc[xl["Antiguidade"] >= 11]
+        dfI = intensity.loc[xl["Antiguidade"] >= 11]
+        sheet = "Seniority>11"
+    elif (value1 == "11"):
+        df = xl.loc[xl["Antiguidade"] < 11]
+        dfI = intensity.loc[xl["Antiguidade"] < 11]
+        sheet = "Seniority<11"
+    elif (value1 == "imc1"):
+        df = xl.loc[xl["IMC"] < 24.9]
+        dfI = intensity.loc[xl["IMC"] < 24.9]
+        sheet = "IMC<24.9"
+    elif (value1 == "imc2"):
+        df = xl.loc[xl["IMC"] >= 24.9]
+        dfI = intensity.loc[xl["IMC"] >= 24.9]
+        sheet = "IMC>24.9"
+    elif (value1 == "mpain"):
+        df = xl.loc[sum_pain_7d > 1]
+        dfI = intensity.loc[sum_pain_7d > 1]
+        sheet = "MultiSitePain"
+    elif (value1 == "pain"):
+        df = xl.loc[sum_pain_7d == 1]
+        dfI = intensity.loc[sum_pain_7d == 1]
+        sheet = "OneSitePain"
+    elif (value1 == "npain"):
+        df = xl.loc[sum_pain_7d == 0]
+        dfI = intensity.loc[sum_pain_7d == 0]
+        sheet = "NoPain"
+
+    violinPlot = dict(
+        data=[{
+            "type": 'violin',
+            "x": df[value2],
+            "y": dfI["Intensidade_Media"],
+            "box": {
+                "visible": True
+            },
+            "meanline": {
+                "visible": True
+            },
+            "line": {
+                "color": 'blue'
+            }
+        },]
+    )
+    # fig3 = {"data": [violinPlot]}
+
+    return violinPlot
 
 if __name__ == '__main__':
     app.run_server(debug=False)
